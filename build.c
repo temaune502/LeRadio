@@ -44,6 +44,7 @@ int main(int argc, char **argv)
     sa_push(&cmd, "-lgdi32");
     sa_push(&cmd, "-lwinmm");
     sa_pushm(&cmd, "build/fds_separate_unit.o");
+    sa_pushm(&cmd, "src/gui.c");
     sa_pushm(&cmd, "-o", "build/main.exe");
 
     char *build_command = sa_join(&cmd, " ");
