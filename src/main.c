@@ -49,9 +49,7 @@ typedef struct
 void next_song(Core* core)
 {
     core->current_song++;
-    if ((size_t)core->current_song >= core->tracks.size)
-        core->current_song = 0;
-    // fds_log(FINFO, "Current track: %d", current_song);
+    if ((size_t)core->current_song >= core->tracks.size)  core->current_song = 0;
 }
 
 void prev_song(Core* core)
@@ -61,19 +59,18 @@ void prev_song(Core* core)
     {
         core->current_song = (int)core->tracks.size - 1;
     }
-//     fds_log(FINFO, "Current track: %d", current_song);
 }
 void play_song(Core* core)
 {
     static int track_local;
     
-    PlayMusicStream(core->track);
     if (core->current_song != track_local)
     {        
         UnloadMusicStream(core->track);
         core->track = LoadMusicStream(temp_arena_sprintf(temp_arena_get(), "%s/%s", TRACKS_FOLDER, core->tracks.data[core->current_song]));
         track_local = core->current_song;
     }
+    PlayMusicStream(core->track);
 }
 
 int main(void)
@@ -103,25 +100,17 @@ int main(void)
         {
             if (is_dir)
                 continue;
-            if (sv_ends_with(name, mp3))
-            {
-                // fds_log(FINFO, "Find musick file: " SV_FMT, SV_ARGS(name));
-                sa_push(&core.tracks, name.data);
-            }
+            if (sv_ends_with(name, mp3)) sa_push(&core.tracks, name.data);
+            else fds_log(FWARN, "Warning unsuported file type pleas convert to mp3: "SV_FMT, SV_ARGS(name));
         }
         fds_dir_iter_close(&it);
     }
+    // Automatic sorting all tracks by alphabet.
+    sa_sort(&core.tracks, NULL);
 
-    // printf("All trecks: \n");
-    // sa_print(&tracks);s
-    core.track = LoadMusicStream(temp_arena_sprintf(&core.frame_arena, "%s/%s", TRACKS_FOLDER, core.tracks.data[core.current_song]));
-
-
-
-    // fds_log(FINFO, "Song count: %d", tracks.size);
-    // fds_log(FINFO, "Current track: %d", current_song);
     while (!WindowShouldClose())
     {
+        UpdateMusicStream(core.track);
         core.window_size.x = GetRenderWidth();
         core.window_size.y = GetRenderHeight();
         if (IsKeyPressed(KEY_Q))
@@ -142,15 +131,17 @@ int main(void)
         if (IsKeyPressed(KEY_P))
             prev_song(&core);
         BeginDrawing();
+        
+        DrawRectangleRect();
 
-         for (int i = 0; i < (int)core.tracks.size; ++i)
+        for (int i = 0; i < (int)core.tracks.size; ++i)
          {
              SV t = sv_from_cstr(core.tracks.data[i]);
              sv_remove_suffix(&t, 4);
              DrawTextEx(
                  core.font,
                  temp_arena_sprintf(&core.frame_arena, "%d: " SV_FMT, i, SV_ARGS(t)),
-                 (Vector2){.x = 10, .y = 80 + (30 * i)},
+                 (Vector2){.x = 20, .y = 20 + (30 * i)},
                  32, 1, (i == core.current_song ? GREEN : RED));
          }
         ClearBackground(GetColor(0x262626));

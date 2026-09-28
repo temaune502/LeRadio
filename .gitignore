@@ -4,3 +4,5 @@ rename.bat
 build.exe
 src/old_fds.h
 build.exe.old
+*.mp3
+tracks 1

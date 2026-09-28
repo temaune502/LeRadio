@@ -48,8 +48,8 @@ int main(int argc, char **argv)
 
     char *fds_build = sa_join(&cmd, " ");
 
-    fds_log(FINFO, "Build command: %s",     fds_build);
-    fds_log(FINFO, "Unit build commad: %s", build_command);
+    // fds_log(FINFO, "Build command: %s",     fds_build);
+    // fds_log(FINFO, "Unit build commad: %s", build_command);
 
     if (fds_dir_exists("build"))
     {
