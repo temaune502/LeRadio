@@ -3,3 +3,4 @@ build
 rename.bat
 build.exe
 src/old_fds.h
+build.exe.old

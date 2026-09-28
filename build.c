@@ -1,8 +1,12 @@
+#undef  FDS_REBUILD_CFLAGS
+#undef  FDS_REBUILD_CC
+#define FDS_REBUILD_CFLAGS "-g -Wall -Wextra -pedantic -pipe"
+#define FDS_REBUILD_CC "gcc"
 #define FDS_IMPL
 #include "src\fds.h"
 
 #define standart_flags(cmd) \
-    sa_push((&cmd), "gcc");   \
+    sa_push((&cmd), "clang");   \
     sa_pushm((&cmd), "-Wall", "-Wextra", "-g", "-pedantic");
 
 #define fds_cmd_run(cmd)    \
@@ -11,6 +15,7 @@
 
 int main(int argc, char **argv)
 {
+    FDS_REBUILD_YOURSELF(argc, argv);
     fds_cmd_result result = {0};
     FlagSet *fl = flagset_new();
 
@@ -19,21 +24,6 @@ int main(int argc, char **argv)
 
     flagset_bool(fl, &run_program, "run", false, "Run program after start");
     flagset_parse(fl, argc, argv);
-
-    // time_t source_time  = get_file_mtime("build.c");
-    // time_t program_time = get_file_mtime("build.exe");
-    // if(source_time > program_time)
-    // {
-    //     needs_rebuild = true;
-    //     printf("Rebuild!!!\n");
-    //     result = fds_cmd_run_ext("gcc build.c -o build.exe.new");
-    //     if(result.exit_code != 0)
-    //     {
-    //         needs_rebuild = false;
-    //         fds_log(FERROR, "Could not rebuild itself\n %s, %s", result.stderr_data, result.stdout_data);
-    //     }
-    //     fds_cmd_result_free(&result);
-    // }
 
     StringArray cmd = {0};
     standart_flags(cmd);
@@ -51,6 +41,7 @@ int main(int argc, char **argv)
     sa_clear(&cmd);
     standart_flags(cmd);
     sa_pushm(&cmd, "-Wno-unused-function");
+    sa_push(&cmd, "-pipe");
     sa_push(&cmd, "-c");
     sa_push(&cmd, "-O0");
     sa_push(&cmd, "src/fds_separate_unit.c");
@@ -70,9 +61,9 @@ int main(int argc, char **argv)
     // Check fucking separate_unit!
     if(!fds_file_exists("build/fds_separate_unit.o"))
     {
-        time_t source_time = get_file_mtime("src/fds_separate_unit.c");
-        time_t program_time = get_file_mtime("build/fds_separate_unit.o");
-        time_t fds_source = get_file_mtime("src/fds.h");
+        time_t source_time = fds_get_file_mtime("src/fds_separate_unit.c");
+        time_t program_time = fds_get_file_mtime("build/fds_separate_unit.o");
+        time_t fds_source = fds_get_file_mtime("src/fds.h");
         if (source_time > program_time || fds_source > program_time)
         {
             result = fds_cmd_run(fds_build);
@@ -102,8 +93,8 @@ int main(int argc, char **argv)
     // Check if exist main.o file
     if (!fds_file_exists("build/main.exe"))
     {
-        time_t source_time = get_file_mtime("src/main.c");
-        time_t program_time = get_file_mtime("build/main.exe");
+        time_t source_time = fds_get_file_mtime("src/main.c");
+        time_t program_time = fds_get_file_mtime("build/main.exe");
         if (source_time > program_time)
         {
             result = fds_cmd_run(build_command);
@@ -128,18 +119,10 @@ int main(int argc, char **argv)
             fds_log(FERROR, "Some probles cant build!\n Stderr: %s\n Stdout %s\n Exit code: %d", result.stderr_data, result.stdout_data, result.exit_code);
     }
 
-    // Check main executabl if exist and needs rebuild!
-    // if(!fds_file_exists("build/main.exe"))
 
-    // printf("Result exit code: %d\n", result.exit_code);
-
-    if (result.exit_code == 0 & run_program)
+    if (result.exit_code == 0 && run_program)
     {
-
-        // result = fds_cmd_run("build/main.exe");
-        fds_cmd_run_async("build/main.exe");
-
-        // printf("%s\n%s\n", result.stdout_data, result.stderr_data);
+        fds_cmd_run_detached("build/main.exe");
     }
 
     fds_cmd_result_free(&result);
@@ -147,5 +130,4 @@ int main(int argc, char **argv)
     free(fds_build);
     sa_free(&cmd);
     flagset_free(fl);
-    // if(needs_rebuild) {fds_cmd_run_async("cmd /c rename.bat");}
 }

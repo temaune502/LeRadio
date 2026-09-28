@@ -30,63 +30,74 @@
 
 
 
-StringArray tracks;
-int current_song = 0;
-Sound track;
 
-void next_song()
+typedef struct 
 {
-    current_song++;
-    if ((size_t)current_song >= tracks.size)
-        current_song = 0;
+    StringArray tracks;
+    Sound track;
+    Font font;
+    Vector2 window_size;
+    FixedArena frame_arena;
+    int current_song;
+    float volume;
+    float trackProgress; 
+    bool shuffle;
+} Core;
+
+
+
+void next_song(Core* core)
+{
+    core->current_song++;
+    if ((size_t)core->current_song >= core->tracks.size)
+        core->current_song = 0;
     // fds_log(FINFO, "Current track: %d", current_song);
 }
 
-void prev_song()
+void prev_song(Core* core)
 {
-    current_song--;
-    if (current_song < 0)
+    core->current_song--;
+    if (core->current_song < 0)
     {
-        current_song = (int)tracks.size - 1;
+        core->current_song = (int)core->tracks.size - 1;
     }
 //     fds_log(FINFO, "Current track: %d", current_song);
 }
-void play_song()
+void play_song(Core* core)
 {
     static int track_local;
     
-    if (current_song != track_local)
+    if (core->current_song != track_local)
     {        
-        UnloadSound(track);
-        track = LoadSound(temp_arena_sprintf(temp_arena_get(), "%s/%s", TRACKS_FOLDER, tracks.data[current_song]));
-        track_local = current_song;
+        UnloadSound(core->track);
+        core->track = LoadSound(temp_arena_sprintf(temp_arena_get(), "%s/%s", TRACKS_FOLDER, core->tracks.data[core->current_song]));
+        track_local = core->current_song;
     }
-    PlaySound(track);
+    PlaySound(core->track);
 }
 
 int main()
 {
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    SetConfigFlags(FLAG_MSAA_4X_HINT);
-    sa_new(&tracks, 64);
+    Core core zeroe;
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE); // |FLAG_MSAA_4X_HINT
+    sa_new(&core.tracks, 64);
     InitWindow(800, 600, "LeRadio");
     InitAudioDevice();
     SetTargetFPS(60);
 
 
-    float volume = 0.5f;
-    float trackProgress = 45.0f; 
-    bool shuffle = false;
+    core.volume = 0.5f;
+    core.trackProgress = 45.0f; 
+    core.shuffle = false;
+    core.frame_arena = fixed_arena_create(64*KB);
 
-
-
-    Font font = LoadFontEx("resources/fonts/segoeui.ttf", 32, 0, 255);
+    core.font = LoadFontEx("resources/fonts/segoeui.ttf", 32, 0, 255);
 
     FdsDirIter it;
     if (fds_dir_iter_open(TRACKS_FOLDER, &it) == 0)
     {
         SV name;
-        SV mp3 = sv_from_cstr("mp3");
+        SV mp3 = sv_from_parts("mp3", 3);
         int is_dir;
         while (fds_dir_iter_next(&it, &name, &is_dir) == 0)
         {
@@ -95,7 +106,7 @@ int main()
             if (sv_ends_with(name, mp3))
             {
                 // fds_log(FINFO, "Find musick file: " SV_FMT, SV_ARGS(name));
-                sa_push(&tracks, name.data);
+                sa_push(&core.tracks, name.data);
             }
         }
         fds_dir_iter_close(&it);
@@ -103,112 +114,53 @@ int main()
 
     // printf("All trecks: \n");
     // sa_print(&tracks);s
+    core.track = LoadSound(temp_arena_sprintf(&core.frame_arena, "%s/%s", TRACKS_FOLDER, core.tracks.data[core.current_song]));
 
-    track = LoadSound(temp_arena_sprintf(temp_arena_get(), "%s/%s", TRACKS_FOLDER, tracks.data[current_song]));
+
 
     // fds_log(FINFO, "Song count: %d", tracks.size);
     // fds_log(FINFO, "Current track: %d", current_song);
     while (!WindowShouldClose())
     {
-        Vector2 window_size = {GetRenderWidth(), GetRenderHeight()};
+        core.window_size.x = GetRenderWidth();
+        core.window_size.y = GetRenderHeight();
         if (IsKeyPressed(KEY_Q))
-            play_song();
+            play_song(&core);
         if (IsKeyPressed(KEY_W))
         {
-            if(!IsSoundPlaying(track))
+            if(!IsSoundPlaying(core.track))
             {
-                ResumeSound(track);
+                ResumeSound(core.track);
             }
             else
             {
-                PauseSound(track);
+                PauseSound(core.track);
             }
         }
         if (IsKeyPressed(KEY_N))
-            next_song();
+            next_song(&core);
         if (IsKeyPressed(KEY_P))
-            prev_song();
+            prev_song(&core);
         BeginDrawing();
 
-        // for (int i = 0; i < tracks.size; ++i)
-        // {
-        //     SV t = sv_from_cstr(tracks.data[i]);
-        //     sv_remove_suffix(&t, 4);
-        //     DrawTextEx(
-        //         font,
-        //         temp_arena_sprintf(temp_arena_get(), "%d: " SV_FMT, i, SV_ARGS(t)),
-        //         (Vector2){.x = 10, .y = 80 + (30 * i)},
-        //         32, 1, (i == current_song ? GREEN : RED));
-        // }
+         for (int i = 0; i < (int)core.tracks.size; ++i)
+         {
+             SV t = sv_from_cstr(core.tracks.data[i]);
+             sv_remove_suffix(&t, 4);
+             DrawTextEx(
+                 core.font,
+                 temp_arena_sprintf(&core.frame_arena, "%d: " SV_FMT, i, SV_ARGS(t)),
+                 (Vector2){.x = 10, .y = 80 + (30 * i)},
+                 32, 1, (i == core.current_song ? GREEN : RED));
+         }
         ClearBackground(GetColor(0x262626));
 
-
-
-
-        Rectangle screenArea = { 10, 10, GetScreenWidth() - 20, GetScreenHeight() - 20 };
-        Layout mainVBox = LayoutBegin(screenArea, LAYOUT_VERTICAL, 10.0f);
-
-        // 1. Заголовок
-        GuiLabel(LayoutNext(&mainVBox, 30.0f), "My C Player", WHITE);
-
-        // 2. Центральна зона (Playlist + Album Art)
-        float centerHeight = (screenArea.height - mainVBox.cursor) - 90.0f; 
-        Layout centerHBox = LayoutBegin(LayoutNext(&mainVBox, centerHeight), LAYOUT_HORIZONTAL, 10.0f);
-        
-        Rectangle playlistArea = LayoutNext(&centerHBox, -0.7f); // 70% ширини
-        DrawRectangleLinesEx(playlistArea, 1, DARKGRAY); // Заглушка під список
-        
-        Rectangle coverArea = LayoutNext(&centerHBox, 0.0f);     // Залишок 30%
-        DrawRectangleRec(coverArea, DARKBLUE);
-
-        // 3. Прогрес-бар треку (імітація руху для тесту)
-        trackProgress += 0.05f;
-        if (trackProgress > 100.0f) trackProgress = 0.0f;
-        GuiProgressBar(LayoutNext(&mainVBox, 10.0f), trackProgress, 0.0f, 100.0f);
-
-        // 4. Панель керування та налаштувань
-        Layout controlsHBox = LayoutBegin(LayoutNext(&mainVBox, 50.0f), LAYOUT_HORIZONTAL, 10.0f);
-        
-        if (GuiButton(LayoutNext(&controlsHBox, 50.0f), "|<")) { /* Попередній */ }
-        if (GuiButton(LayoutNext(&controlsHBox, 80.0f), "PLAY")) { /* Старт/Стоп */ }
-        if (GuiButton(LayoutNext(&controlsHBox, 50.0f), ">|")) { /* Наступний */ }
-        
-        // Чекбокс під шафл (виділяємо квадрат 30x30, текст малюється збоку)
-        Rectangle shuffleRect = LayoutNext(&controlsHBox, 30.0f);
-        shuffleRect.height = 30; // Зменшуємо висоту чекбокса по центру
-        shuffleRect.y += 10;
-        GuiCheckbox(shuffleRect, "Shuffle", &shuffle);
-
-        // Порожній простір, щоб відштовхнути гучність вправо
-        LayoutNext(&controlsHBox, 40.0f); 
-
-        // Слайдер гучності займає весь залишок
-        volume = GuiSlider(LayoutNext(&controlsHBox, 0.0f), volume, 0.0f, 1.0f);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        core.frame_arena.offset = 0;
         EndDrawing();
     }
-    UnloadFont(font);
+    UnloadFont(core.font);
     CloseWindow();
     CloseAudioDevice();
-    sa_free(&tracks);
+    sa_free(&core.tracks);
     return 0;
 }
