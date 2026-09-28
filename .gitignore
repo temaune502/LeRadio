@@ -2,3 +2,4 @@ raylib
 build
 rename.bat
 build.exe
+src/old_fds.h
