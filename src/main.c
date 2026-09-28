@@ -34,7 +34,7 @@
 typedef struct 
 {
     StringArray tracks;
-    Sound track;
+    Music track;
     Font font;
     Vector2 window_size;
     FixedArena frame_arena;
@@ -67,16 +67,16 @@ void play_song(Core* core)
 {
     static int track_local;
     
+    PlayMusicStream(core->track);
     if (core->current_song != track_local)
     {        
-        UnloadSound(core->track);
-        core->track = LoadSound(temp_arena_sprintf(temp_arena_get(), "%s/%s", TRACKS_FOLDER, core->tracks.data[core->current_song]));
+        UnloadMusicStream(core->track);
+        core->track = LoadMusicStream(temp_arena_sprintf(temp_arena_get(), "%s/%s", TRACKS_FOLDER, core->tracks.data[core->current_song]));
         track_local = core->current_song;
     }
-    PlaySound(core->track);
 }
 
-int main()
+int main(void)
 {
     Core core zeroe;
     SetConfigFlags(FLAG_WINDOW_RESIZABLE); // |FLAG_MSAA_4X_HINT
@@ -114,7 +114,7 @@ int main()
 
     // printf("All trecks: \n");
     // sa_print(&tracks);s
-    core.track = LoadSound(temp_arena_sprintf(&core.frame_arena, "%s/%s", TRACKS_FOLDER, core.tracks.data[core.current_song]));
+    core.track = LoadMusicStream(temp_arena_sprintf(&core.frame_arena, "%s/%s", TRACKS_FOLDER, core.tracks.data[core.current_song]));
 
 
 
@@ -128,13 +128,13 @@ int main()
             play_song(&core);
         if (IsKeyPressed(KEY_W))
         {
-            if(!IsSoundPlaying(core.track))
+            if(!IsMusicStreamPlaying(core.track))
             {
-                ResumeSound(core.track);
+                ResumeMusicStream(core.track);
             }
             else
             {
-                PauseSound(core.track);
+                PauseMusicStream(core.track);
             }
         }
         if (IsKeyPressed(KEY_N))

@@ -7,7 +7,7 @@
 
 #define standart_flags(cmd) \
     sa_push((&cmd), "clang");   \
-    sa_pushm((&cmd), "-Wall", "-Wextra", "-g", "-pedantic");
+    sa_pushm((&cmd), "-Wall", "-Wextra", "-g", "-pedantic", "-Wno-language-extension-token");
 
 #define fds_cmd_run(cmd)    \
     fds_cmd_run_ext((cmd)); \
@@ -20,7 +20,6 @@ int main(int argc, char **argv)
     FlagSet *fl = flagset_new();
 
     bool run_program = false;
-    bool needs_rebuild = false;
 
     flagset_bool(fl, &run_program, "run", false, "Run program after start");
     flagset_parse(fl, argc, argv);
@@ -29,7 +28,7 @@ int main(int argc, char **argv)
     standart_flags(cmd);
     sa_pushm(&cmd, "-O0", "-pipe", "-Wno-unused-function");
     sa_pushm(&cmd, "src/main.c");
-    sa_push(&cmd, "-I:raylib/include");
+    sa_push(&cmd, "-I raylib/include");
     sa_push(&cmd, "raylib/lib/libraylib.a");
     sa_push(&cmd, "-lgdi32");
     sa_push(&cmd, "-lwinmm");
@@ -67,9 +66,9 @@ int main(int argc, char **argv)
         if (source_time > program_time || fds_source > program_time)
         {
             result = fds_cmd_run(fds_build);
-            if (result.stdout_len < 0)
+            if (result.stdout_len > 0)
                 printf("%s", result.stdout_data);
-            if (result.stderr_len < 0)
+            if (result.stderr_len > 0)
                 printf("%s", result.stderr_data);
 
             if (result.exit_code != 0)
@@ -110,9 +109,9 @@ int main(int argc, char **argv)
     else
     {
         result = fds_cmd_run(build_command);
-        if (result.stdout_len < 0)
+        if (result.stdout_len > 0)
             printf("%s", result.stdout_data);
-        if (result.stderr_len < 0)
+        if (result.stderr_len > 0)
             printf("%s", result.stderr_data);
 
         if (result.exit_code != 0)
