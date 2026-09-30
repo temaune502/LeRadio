@@ -1342,10 +1342,12 @@ extern "C"
             reset = "";
             meta_color = "";
         }
-
+        #ifdef SHORT_LOG
+        fprintf(stream, "%s%s%s %s:%s", color, prefix, reset, meta_color, reset);
+        #else
         // Виводимо префікс і метадані (з кольором або без)
         fprintf(stream, "%s%s%s %s%s:%d:%s:%s ", color, prefix, reset, meta_color, file, line, func, reset);
-
+        #endif
         // Виводимо повідомлення
         va_list args;
         va_start(args, fmt);

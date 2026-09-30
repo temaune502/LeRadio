@@ -1,3 +1,4 @@
+#define SHORT_LOT
 #undef  FDS_REBUILD_CFLAGS
 #undef  FDS_REBUILD_CC
 #define FDS_REBUILD_CFLAGS "-g -Wall -Wextra -pedantic -pipe"
